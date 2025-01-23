@@ -23,7 +23,7 @@ export default {
           .filter(line => line.trim()) // Remove empty lines
           .map(line => {
             const [, name] = line.split(',')
-            return name ? name.trim() : null
+            return name ? name.trim().toUpperCase() : null
           })
           .filter(name => name) // Remove null/empty values
       } catch (error) {
@@ -41,12 +41,16 @@ export default {
         // Load boys names
         const boysPromises = Object.keys(boysModules).map(path => this.loadCSV(path))
         const boysNamesArrays = await Promise.all(boysPromises)
-        this.maleNames = [...new Set(boysNamesArrays.flat())].sort()
+        // Use Set with case-insensitive comparison
+        const boysSet = new Set(boysNamesArrays.flat().map(name => name.toUpperCase()))
+        this.maleNames = [...boysSet].sort()
 
         // Load girls names
         const girlsPromises = Object.keys(girlsModules).map(path => this.loadCSV(path))
         const girlsNamesArrays = await Promise.all(girlsPromises)
-        this.femaleNames = [...new Set(girlsNamesArrays.flat())].sort()
+        // Use Set with case-insensitive comparison
+        const girlsSet = new Set(girlsNamesArrays.flat().map(name => name.toUpperCase()))
+        this.femaleNames = [...girlsSet].sort()
 
         this.isLoading = false
       } catch (error) {
