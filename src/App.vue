@@ -340,9 +340,7 @@ body {
 }
 
 .filters {
-  margin: 30px auto;
   width: 100%;
-  max-width: 1000px;
   background-color: #f8f9fa;
   padding: 20px;
   border-radius: 12px;
