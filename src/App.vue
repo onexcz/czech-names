@@ -6,12 +6,52 @@ export default {
       selectedGender: null,
       maleNames: [],
       femaleNames: [],
-      isLoading: true
+      isLoading: true,
+      filters: {
+        year: '',
+        sortBy: 'alpha', // 'alpha' or 'rank'
+        searchText: ''
+      },
+      availableYears: [],
+      namesByYear: {} // Will store name-rank mappings for each year
     }
   },
   computed: {
     displayedNames() {
-      return this.selectedGender === 'male' ? this.maleNames : this.femaleNames
+      if (!this.selectedGender) return []
+      
+      let names = this.selectedGender === 'male' ? this.maleNames : this.femaleNames
+      
+      // Apply text filter
+      if (this.filters.searchText) {
+        const searchTerm = this.filters.searchText.toUpperCase()
+        names = names.filter(name => name.includes(searchTerm))
+      }
+
+      // If year is selected and sorting by rank
+      if (this.filters.year && this.filters.sortBy === 'rank') {
+        const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender] || {}
+        // Filter names that exist in selected year and add rank information
+        names = names
+          .filter(name => yearData[name])
+          .map(name => ({
+            name,
+            rank: yearData[name]
+          }))
+          .sort((a, b) => {
+            // Parse ranks (handle ranges like "14-15" by taking first number)
+            const rankA = parseInt(a.rank.split('-')[0])
+            const rankB = parseInt(b.rank.split('-')[0])
+            return rankA - rankB
+          })
+      } else {
+        // Alphabetical sorting
+        names = names.sort()
+        // Convert to object format to match rank format
+        names = names.map(name => ({ name, rank: '' }))
+      }
+      
+      return names
     }
   },
   methods: {
@@ -19,13 +59,30 @@ export default {
       try {
         const response = await fetch(filePath)
         const text = await response.text()
-        return text.split('\n')
-          .filter(line => line.trim()) // Remove empty lines
+        const year = filePath.match(/\/(\d{4})\.csv$/)?.[1]
+        
+        if (year && !this.namesByYear[year]) {
+          this.namesByYear[year] = { male: {}, female: {} }
+        }
+
+        const names = text.split('\n')
+          .filter(line => line.trim())
           .map(line => {
-            const [, name] = line.split(',')
-            return name ? name.trim().toUpperCase() : null
+            const [rank, name] = line.split(',').map(item => item.trim())
+            if (name) {
+              const upperName = name.toUpperCase()
+              // Store rank information
+              if (year) {
+                const gender = filePath.includes('/boys/') ? 'male' : 'female'
+                this.namesByYear[year][gender][upperName] = rank
+              }
+              return upperName
+            }
+            return null
           })
-          .filter(name => name) // Remove null/empty values
+          .filter(name => name)
+
+        return names
       } catch (error) {
         console.error(`Error loading ${filePath}:`, error)
         return []
@@ -34,23 +91,27 @@ export default {
 
     async loadAllNames() {
       try {
-        // Import all CSV files from the data directories
         const boysModules = import.meta.glob('/src/data/boys/*.csv')
         const girlsModules = import.meta.glob('/src/data/girls/*.csv')
+
+        // Extract available years from file paths
+        this.availableYears = [...new Set([
+          ...Object.keys(boysModules).map(path => path.match(/\/(\d{4})\.csv$/)?.[1]),
+          ...Object.keys(girlsModules).map(path => path.match(/\/(\d{4})\.csv$/)?.[1])
+        ].filter(year => year))]
+        .sort((a, b) => b - a) // Sort years descending
 
         // Load boys names
         const boysPromises = Object.keys(boysModules).map(path => this.loadCSV(path))
         const boysNamesArrays = await Promise.all(boysPromises)
-        // Use Set with case-insensitive comparison
-        const boysSet = new Set(boysNamesArrays.flat().map(name => name.toUpperCase()))
-        this.maleNames = [...boysSet].sort()
+        const boysSet = new Set(boysNamesArrays.flat())
+        this.maleNames = [...boysSet]
 
         // Load girls names
         const girlsPromises = Object.keys(girlsModules).map(path => this.loadCSV(path))
         const girlsNamesArrays = await Promise.all(girlsPromises)
-        // Use Set with case-insensitive comparison
-        const girlsSet = new Set(girlsNamesArrays.flat().map(name => name.toUpperCase()))
-        this.femaleNames = [...girlsSet].sort()
+        const girlsSet = new Set(girlsNamesArrays.flat())
+        this.femaleNames = [...girlsSet]
 
         this.isLoading = false
       } catch (error) {
@@ -97,10 +158,47 @@ export default {
         </div>
       </div>
 
+      <div v-if="selectedGender" class="filters">
+        <div class="filter-group">
+          <label for="year">Year:</label>
+          <select id="year" v-model="filters.year">
+            <option value="">All years</option>
+            <option v-for="year in availableYears" :key="year" :value="year">
+              {{ year }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="sort">Sort by:</label>
+          <select 
+            id="sort" 
+            v-model="filters.sortBy"
+            :title="!filters.year && filters.sortBy === 'rank' ? 'Select a year to sort by rank' : ''"
+          >
+            <option value="alpha">Alphabetically</option>
+            <option value="rank" :disabled="!filters.year">By rank</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="search">Search:</label>
+          <input 
+            id="search" 
+            type="text" 
+            v-model="filters.searchText" 
+            placeholder="Filter names..."
+          >
+        </div>
+      </div>
+
       <div class="names-list" v-if="selectedGender">
         <h3>{{ selectedGender === 'male' ? 'Boys' : 'Girls' }} Names</h3>
         <ul>
-          <li v-for="name in displayedNames" :key="name">{{ name }}</li>
+          <li v-for="item in displayedNames" :key="item.name">
+            <span v-if="filters.sortBy === 'rank'" class="rank">{{ item.rank }}</span>
+            {{ item.name }}
+          </li>
         </ul>
       </div>
     </template>
@@ -219,5 +317,55 @@ body {
   padding: 2rem;
   font-size: 1.2rem;
   color: #666;
+}
+
+.filters {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-group label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.filter-group select,
+.filter-group input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-width: 150px;
+}
+
+.names-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank {
+  color: #666;
+  font-size: 0.9em;
+  min-width: 30px;
+  text-align: right;
+}
+
+select[disabled] {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+select[title] {
+  cursor: help;
 }
 </style>
