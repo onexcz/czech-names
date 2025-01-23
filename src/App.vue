@@ -4,14 +4,59 @@ export default {
   data() {
     return {
       selectedGender: null,
-      maleNames: ['Jakub', 'Jan', 'Tomáš', 'Adam', 'David', 'Filip', 'Martin', 'Lukáš', 'Vojtěch', 'Matěj'],
-      femaleNames: ['Tereza', 'Anna', 'Eliška', 'Adéla', 'Karolína', 'Natálie', 'Kristýna', 'Barbora', 'Lucie', 'Kateřina']
+      maleNames: [],
+      femaleNames: [],
+      isLoading: true
     }
   },
   computed: {
     displayedNames() {
       return this.selectedGender === 'male' ? this.maleNames : this.femaleNames
     }
+  },
+  methods: {
+    async loadCSV(filePath) {
+      try {
+        const response = await fetch(filePath)
+        const text = await response.text()
+        return text.split('\n')
+          .filter(line => line.trim()) // Remove empty lines
+          .map(line => {
+            const [, name] = line.split(',')
+            return name ? name.trim() : null
+          })
+          .filter(name => name) // Remove null/empty values
+      } catch (error) {
+        console.error(`Error loading ${filePath}:`, error)
+        return []
+      }
+    },
+
+    async loadAllNames() {
+      try {
+        // Import all CSV files from the data directories
+        const boysModules = import.meta.glob('/src/data/boys/*.csv')
+        const girlsModules = import.meta.glob('/src/data/girls/*.csv')
+
+        // Load boys names
+        const boysPromises = Object.keys(boysModules).map(path => this.loadCSV(path))
+        const boysNamesArrays = await Promise.all(boysPromises)
+        this.maleNames = [...new Set(boysNamesArrays.flat())].sort()
+
+        // Load girls names
+        const girlsPromises = Object.keys(girlsModules).map(path => this.loadCSV(path))
+        const girlsNamesArrays = await Promise.all(girlsPromises)
+        this.femaleNames = [...new Set(girlsNamesArrays.flat())].sort()
+
+        this.isLoading = false
+      } catch (error) {
+        console.error('Error loading names:', error)
+        this.isLoading = false
+      }
+    }
+  },
+  mounted() {
+    this.loadAllNames()
   }
 }
 </script>
@@ -24,31 +69,37 @@ export default {
       <p class="info-text"><em>Note: This is not a complete list of all Czech names, but rather a collection of names commonly used for newborns in recent decades.</em></p>
     </div>
 
-    <div class="gender-selection">
-      <div 
-        class="gender-card male"
-        :class="{ active: selectedGender === 'male' }"
-        @click="selectedGender = 'male'"
-      >
-        <i class="fas fa-mars"></i>
-        <h2>BOYS</h2>
-      </div>
-      <div 
-        class="gender-card female"
-        :class="{ active: selectedGender === 'female' }"
-        @click="selectedGender = 'female'"
-      >
-        <i class="fas fa-venus"></i>
-        <h2>GIRLS</h2>
-      </div>
+    <div v-if="isLoading" class="loading">
+      Loading names...
     </div>
 
-    <div class="names-list" v-if="selectedGender">
-      <h3>{{ selectedGender === 'male' ? 'Boys' : 'Girls' }} Names</h3>
-      <ul>
-        <li v-for="name in displayedNames" :key="name">{{ name }}</li>
-      </ul>
-    </div>
+    <template v-else>
+      <div class="gender-selection">
+        <div 
+          class="gender-card male"
+          :class="{ active: selectedGender === 'male' }"
+          @click="selectedGender = 'male'"
+        >
+          <i class="fas fa-mars"></i>
+          <h2>BOYS</h2>
+        </div>
+        <div 
+          class="gender-card female"
+          :class="{ active: selectedGender === 'female' }"
+          @click="selectedGender = 'female'"
+        >
+          <i class="fas fa-venus"></i>
+          <h2>GIRLS</h2>
+        </div>
+      </div>
+
+      <div class="names-list" v-if="selectedGender">
+        <h3>{{ selectedGender === 'male' ? 'Boys' : 'Girls' }} Names</h3>
+        <ul>
+          <li v-for="name in displayedNames" :key="name">{{ name }}</li>
+        </ul>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -157,5 +208,12 @@ body {
   border-radius: 5px;
   color: #333;
   border: 1px solid #ddd;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
 }
 </style>
