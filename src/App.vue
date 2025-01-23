@@ -137,13 +137,13 @@ export default {
 <template>
   <div class="app-container">
     <div class="info-section">
-      <h1>Czech Names Database</h1>
-      <p class="info-text">Explore popular Czech names given to newborns since the year 2000.</p>
-      <p class="info-text"><em>Note: This is not a complete list of all Czech names, but rather a collection of names commonly used for newborns in recent decades.</em></p>
+      <h1>Databáze českých jmen</h1>
+      <p class="info-text">Prozkoumejte česká jména dávaná novorozencům od roku 2000.</p>
+      <p class="info-text"><em>Poznámka: Nejedná se o kompletní seznam všech českých jmen, ale o sbírku jmen běžně používaných pro novorozence v posledních desetiletích.</em></p>
     </div>
 
     <div v-if="isLoading" class="loading">
-      Loading names...
+      Načítání jmen...
     </div>
 
     <template v-else>
@@ -154,7 +154,7 @@ export default {
           @click="selectedGender = 'male'"
         >
           <i class="fas fa-mars"></i>
-          <h2>BOYS</h2>
+          <h2>CHLAPCI</h2>
         </div>
         <div 
           class="gender-card female"
@@ -162,16 +162,16 @@ export default {
           @click="selectedGender = 'female'"
         >
           <i class="fas fa-venus"></i>
-          <h2>GIRLS</h2>
+          <h2>DÍVKY</h2>
         </div>
       </div>
 
       <div v-if="selectedGender" class="filters">
         <div class="filters-row">
           <div class="filter-group">
-            <label for="year">Year</label>
+            <label for="year">Rok</label>
             <select id="year" v-model="filters.year">
-              <option value="">All years</option>
+              <option value="">Všechny roky</option>
               <option v-for="year in availableYears" :key="year" :value="year">
                 {{ year }}
               </option>
@@ -179,24 +179,26 @@ export default {
           </div>
 
           <div class="filter-group">
-            <label for="sort">Sort by</label>
+            <label for="sort">Řazení</label>
             <select 
               id="sort" 
               v-model="filters.sortBy"
-              :title="!filters.year && filters.sortBy === 'rank' ? 'Select a year to sort by rank' : ''"
+              :title="!filters.year && filters.sortBy === 'rank' ? 'Pro řazení podle pořadí nejdříve vyberte rok' : ''"
             >
-              <option value="alpha">Alphabetically</option>
-              <option value="rank" :disabled="!filters.year">By rank</option>
+              <option value="alpha">Abecedně</option>
+              <option value="rank" :disabled="!filters.year">
+                Podle pořadí {{ !filters.year ? '(nejdříve vyberte rok)' : '' }}
+              </option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label for="search">Search</label>
+            <label for="search">Hledat</label>
             <input 
               id="search" 
               type="text" 
               v-model="filters.searchText" 
-              placeholder="Filter names..."
+              placeholder="Filtrovat jména..."
             >
           </div>
 
@@ -206,14 +208,14 @@ export default {
                 type="checkbox" 
                 v-model="filters.includePluralNames"
               >
-              <span class="checkbox-text">Include plural names</span>
+              <span class="checkbox-text">Včetně víceslovných jmen</span>
             </label>
           </div>
         </div>
       </div>
 
       <div class="names-list" v-if="selectedGender">
-        <h3>{{ selectedGender === 'male' ? 'Boys' : 'Girls' }} Names</h3>
+        <h3>Jména pro {{ selectedGender === 'male' ? 'chlapce' : 'dívky' }}</h3>
         <ul>
           <li v-for="item in displayedNames" :key="item.name">
             <span v-if="filters.sortBy === 'rank'" class="rank">{{ item.rank }}</span>
@@ -415,10 +417,11 @@ body {
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  padding: 4px 0;
 }
 
 .checkbox-label input[type="checkbox"] {
