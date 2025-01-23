@@ -9,11 +9,12 @@ export default {
       isLoading: true,
       filters: {
         year: '',
-        sortBy: 'alpha', // 'alpha' or 'rank'
-        searchText: ''
+        sortBy: 'alpha',
+        searchText: '',
+        includePluralNames: true
       },
       availableYears: [],
-      namesByYear: {} // Will store name-rank mappings for each year
+      namesByYear: {}
     }
   },
   computed: {
@@ -28,18 +29,26 @@ export default {
         names = names.filter(name => name.includes(searchTerm))
       }
 
-      // If year is selected and sorting by rank
-      if (this.filters.year && this.filters.sortBy === 'rank') {
+      // Filter by year (for both sorting methods)
+      if (this.filters.year) {
         const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender] || {}
-        // Filter names that exist in selected year and add rank information
+        names = names.filter(name => yearData[name])
+      }
+
+      // Filter plural names
+      if (!this.filters.includePluralNames) {
+        names = names.filter(name => !name.includes(' '))
+      }
+
+      // If sorting by rank
+      if (this.filters.year && this.filters.sortBy === 'rank') {
+        const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender]
         names = names
-          .filter(name => yearData[name])
           .map(name => ({
             name,
             rank: yearData[name]
           }))
           .sort((a, b) => {
-            // Parse ranks (handle ranges like "14-15" by taking first number)
             const rankA = parseInt(a.rank.split('-')[0])
             const rankB = parseInt(b.rank.split('-')[0])
             return rankA - rankB
@@ -47,7 +56,6 @@ export default {
       } else {
         // Alphabetical sorting
         names = names.sort()
-        // Convert to object format to match rank format
         names = names.map(name => ({ name, rank: '' }))
       }
       
@@ -159,36 +167,48 @@ export default {
       </div>
 
       <div v-if="selectedGender" class="filters">
-        <div class="filter-group">
-          <label for="year">Year:</label>
-          <select id="year" v-model="filters.year">
-            <option value="">All years</option>
-            <option v-for="year in availableYears" :key="year" :value="year">
-              {{ year }}
-            </option>
-          </select>
-        </div>
+        <div class="filters-row">
+          <div class="filter-group">
+            <label for="year">Year</label>
+            <select id="year" v-model="filters.year">
+              <option value="">All years</option>
+              <option v-for="year in availableYears" :key="year" :value="year">
+                {{ year }}
+              </option>
+            </select>
+          </div>
 
-        <div class="filter-group">
-          <label for="sort">Sort by:</label>
-          <select 
-            id="sort" 
-            v-model="filters.sortBy"
-            :title="!filters.year && filters.sortBy === 'rank' ? 'Select a year to sort by rank' : ''"
-          >
-            <option value="alpha">Alphabetically</option>
-            <option value="rank" :disabled="!filters.year">By rank</option>
-          </select>
-        </div>
+          <div class="filter-group">
+            <label for="sort">Sort by</label>
+            <select 
+              id="sort" 
+              v-model="filters.sortBy"
+              :title="!filters.year && filters.sortBy === 'rank' ? 'Select a year to sort by rank' : ''"
+            >
+              <option value="alpha">Alphabetically</option>
+              <option value="rank" :disabled="!filters.year">By rank</option>
+            </select>
+          </div>
 
-        <div class="filter-group">
-          <label for="search">Search:</label>
-          <input 
-            id="search" 
-            type="text" 
-            v-model="filters.searchText" 
-            placeholder="Filter names..."
-          >
+          <div class="filter-group">
+            <label for="search">Search</label>
+            <input 
+              id="search" 
+              type="text" 
+              v-model="filters.searchText" 
+              placeholder="Filter names..."
+            >
+          </div>
+
+          <div class="filter-group checkbox-group">
+            <label class="checkbox-label">
+              <input 
+                type="checkbox" 
+                v-model="filters.includePluralNames"
+              >
+              <span class="checkbox-text">Include plural names</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -320,52 +340,150 @@ body {
 }
 
 .filters {
+  margin: 30px auto;
+  width: 100%;
+  max-width: 1000px;
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.filters-row {
   display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  justify-content: center;
-  flex-wrap: wrap;
+  flex-direction: row;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex: 1;
+  min-width: 120px;
 }
 
 .filter-group label {
-  font-size: 0.9rem;
-  color: #666;
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .filter-group select,
-.filter-group input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 150px;
+.filter-group input[type="text"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: white;
+  font-size: 0.9rem;
+  color: #374151;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-.names-list li {
+.filter-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+.filter-group select:hover,
+.filter-group input[type="text"]:hover {
+  border-color: #d1d5db;
+}
+
+.filter-group select:focus,
+.filter-group input[type="text"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.checkbox-group {
+  flex: 0.8;
+  min-width: auto;
   display: flex;
-  gap: 8px;
   align-items: center;
-  justify-content: center;
+  margin-top: 24px;
 }
 
-.rank {
-  color: #666;
-  font-size: 0.9em;
-  min-width: 30px;
-  text-align: right;
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.checkbox-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  background-color: white;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-text {
+  font-size: 0.9rem;
+  color: #374151;
 }
 
 select[disabled] {
+  background-color: #f3f4f6;
   cursor: not-allowed;
   opacity: 0.7;
 }
 
-select[title] {
-  cursor: help;
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .filters {
+    padding: 16px;
+    margin: 20px auto;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .checkbox-group {
+    margin-top: 8px;
+    justify-content: flex-start;
+  }
 }
 </style>
