@@ -113,8 +113,8 @@ export default defineComponent({
 
     async loadAllNames() {
       try {
-        const boysModules = import.meta.glob<string>('/src/data/boys/*.csv')
-        const girlsModules = import.meta.glob<string>('/src/data/girls/*.csv')
+        const boysModules = import.meta.glob<string>('/data/boys/*.csv')
+        const girlsModules = import.meta.glob<string>('/data/girls/*.csv')
 
         // Extract available years from file paths
         const years = [
