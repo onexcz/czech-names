@@ -1,24 +1,41 @@
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from 'vue'
+
+interface NameItem {
+  name: string
+  rank: string
+}
+
+interface YearData {
+  male: Record<string, string>
+  female: Record<string, string>
+}
+
+interface NamesByYear {
+  [key: string]: YearData
+}
+
+export default defineComponent({
   name: 'App',
   data() {
     return {
-      selectedGender: null,
-      maleNames: [],
-      femaleNames: [],
+      selectedGender: null as 'male' | 'female' | null,
+      maleNames: [] as string[],
+      femaleNames: [] as string[],
       isLoading: true,
       filters: {
         year: '',
-        sortBy: 'alpha',
+        sortBy: 'alpha' as 'alpha' | 'rank',
         searchText: '',
         includePluralNames: true
       },
-      availableYears: [],
-      namesByYear: {}
+      availableYears: [] as string[],
+      namesByYear: {} as NamesByYear,
+      displayedItems: [] as NameItem[]
     }
   },
   computed: {
-    displayedNames() {
+    displayedNames(): NameItem[] {
       if (!this.selectedGender) return []
       
       let names = this.selectedGender === 'male' ? this.maleNames : this.femaleNames
@@ -42,11 +59,11 @@ export default {
 
       // If sorting by rank
       if (this.filters.year && this.filters.sortBy === 'rank') {
-        const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender]
-        names = names
+        const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender] || {}
+        return names
           .map(name => ({
             name,
-            rank: yearData[name]
+            rank: yearData[name] || ''
           }))
           .sort((a, b) => {
             const rankA = parseInt(a.rank.split('-')[0])
@@ -55,15 +72,12 @@ export default {
           })
       } else {
         // Alphabetical sorting
-        names = names.sort()
-        names = names.map(name => ({ name, rank: '' }))
+        return names.sort().map(name => ({ name, rank: '' }))
       }
-      
-      return names
     }
   },
   methods: {
-    async loadCSV(filePath) {
+    async loadCSV(filePath: string): Promise<string[]> {
       try {
         const response = await fetch(filePath)
         const text = await response.text()
@@ -88,7 +102,7 @@ export default {
             }
             return null
           })
-          .filter(name => name)
+          .filter((name): name is string => name !== null)
 
         return names
       } catch (error) {
@@ -99,15 +113,17 @@ export default {
 
     async loadAllNames() {
       try {
-        const boysModules = import.meta.glob('/src/data/boys/*.csv')
-        const girlsModules = import.meta.glob('/src/data/girls/*.csv')
+        const boysModules = import.meta.glob<string>('/src/data/boys/*.csv')
+        const girlsModules = import.meta.glob<string>('/src/data/girls/*.csv')
 
         // Extract available years from file paths
-        this.availableYears = [...new Set([
+        const years = [
           ...Object.keys(boysModules).map(path => path.match(/\/(\d{4})\.csv$/)?.[1]),
           ...Object.keys(girlsModules).map(path => path.match(/\/(\d{4})\.csv$/)?.[1])
-        ].filter(year => year))]
-        .sort((a, b) => b - a) // Sort years descending
+        ].filter((year): year is string => year !== undefined)
+
+        this.availableYears = [...new Set(years)]
+          .sort((a, b) => parseInt(b) - parseInt(a)) // Sort years descending
 
         // Load boys names
         const boysPromises = Object.keys(boysModules).map(path => this.loadCSV(path))
@@ -131,7 +147,7 @@ export default {
   mounted() {
     this.loadAllNames()
   }
-}
+})
 </script>
 
 <template>
