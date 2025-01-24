@@ -115,6 +115,7 @@ export default defineComponent({
       try {
         const years = new Set<string>()
         
+        // Check years from 2000 to current year
         for (let year = 2000; year <= new Date().getFullYear(); year++) {
           const boysPath = `/data/boys/${year}.csv`
           const girlsPath = `/data/girls/${year}.csv`
@@ -124,17 +125,35 @@ export default defineComponent({
               fetch(boysPath),
               fetch(girlsPath)
             ])
-            
-            if (boysResponse.ok || girlsResponse.ok) {
+
+            // Check if responses are CSV files by looking at content-type or first line
+            const isCSV = async (response: Response) => {
+              const text = await response.text()
+              // Check if the content looks like CSV (contains a comma and starts with a number)
+              return /^\d+,/.test(text.trim())
+            }
+
+            const [hasBoysFile, hasGirlsFile] = await Promise.all([
+              isCSV(boysResponse),
+              isCSV(girlsResponse)
+            ])
+
+            if (hasBoysFile || hasGirlsFile) {
               years.add(year.toString())
             }
           } catch (e) {
+            // Skip if file doesn't exist or there's an error
             continue
           }
         }
 
+        if (years.size === 0) {
+          throw new Error('No data files found')
+        }
+
         this.availableYears = [...years].sort((a, b) => parseInt(b) - parseInt(a))
 
+        // Load boys names
         const boysPromises = this.availableYears.map(year => 
           this.loadCSV(`/data/boys/${year}.csv`)
         )
@@ -142,6 +161,7 @@ export default defineComponent({
         const boysSet = new Set(boysNamesArrays.flat())
         this.maleNames = [...boysSet]
 
+        // Load girls names
         const girlsPromises = this.availableYears.map(year => 
           this.loadCSV(`/data/girls/${year}.csv`)
         )
