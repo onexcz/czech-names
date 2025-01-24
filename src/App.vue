@@ -95,7 +95,7 @@ export default defineComponent({
               const upperName = name.toUpperCase()
               // Store rank information
               if (year) {
-                const gender = filePath.includes('/boys/') ? 'male' : 'female'
+                const gender = filePath.includes('/data/boys/') ? 'male' : 'female'
                 this.namesByYear[year][gender][upperName] = rank
               }
               return upperName
@@ -113,26 +113,38 @@ export default defineComponent({
 
     async loadAllNames() {
       try {
-        const boysModules = import.meta.glob<string>('/data/boys/*.csv')
-        const girlsModules = import.meta.glob<string>('/data/girls/*.csv')
+        const years = new Set<string>()
+        
+        for (let year = 2000; year <= new Date().getFullYear(); year++) {
+          const boysPath = `/data/boys/${year}.csv`
+          const girlsPath = `/data/girls/${year}.csv`
+          
+          try {
+            const [boysResponse, girlsResponse] = await Promise.all([
+              fetch(boysPath),
+              fetch(girlsPath)
+            ])
+            
+            if (boysResponse.ok || girlsResponse.ok) {
+              years.add(year.toString())
+            }
+          } catch (e) {
+            continue
+          }
+        }
 
-        // Extract available years from file paths
-        const years = [
-          ...Object.keys(boysModules).map(path => path.match(/\/(\d{4})\.csv$/)?.[1]),
-          ...Object.keys(girlsModules).map(path => path.match(/\/(\d{4})\.csv$/)?.[1])
-        ].filter((year): year is string => year !== undefined)
+        this.availableYears = [...years].sort((a, b) => parseInt(b) - parseInt(a))
 
-        this.availableYears = [...new Set(years)]
-          .sort((a, b) => parseInt(b) - parseInt(a)) // Sort years descending
-
-        // Load boys names
-        const boysPromises = Object.keys(boysModules).map(path => this.loadCSV(path))
+        const boysPromises = this.availableYears.map(year => 
+          this.loadCSV(`/data/boys/${year}.csv`)
+        )
         const boysNamesArrays = await Promise.all(boysPromises)
         const boysSet = new Set(boysNamesArrays.flat())
         this.maleNames = [...boysSet]
 
-        // Load girls names
-        const girlsPromises = Object.keys(girlsModules).map(path => this.loadCSV(path))
+        const girlsPromises = this.availableYears.map(year => 
+          this.loadCSV(`/data/girls/${year}.csv`)
+        )
         const girlsNamesArrays = await Promise.all(girlsPromises)
         const girlsSet = new Set(girlsNamesArrays.flat())
         this.femaleNames = [...girlsSet]
