@@ -357,7 +357,7 @@ body {
 .names-list {
   max-width: 600px;
   margin: 0 auto;
-  padding: 20px;
+  padding-top: 20px;
 }
 
 .names-list h3 {
