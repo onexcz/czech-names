@@ -194,8 +194,8 @@ export default defineComponent({
   <div class="app-container">
     <div class="info-section">
       <h1>Databáze českých jmen</h1>
-      <p class="info-text">Prozkoumejte česká jména dávaná novorozencům od roku 2000.</p>
-      <p class="info-text"><em>Poznámka: Nejedná se o kompletní seznam všech českých jmen, ale o sbírku jmen běžně používaných pro novorozence v posledních desetiletích.</em></p>
+      <p class="info-text">Neoficiální seznam jmen dětí narozených po roce 2000.</p>
+      <p class="info-text"><em>Poznámka: Nejedná se o kompletní seznam všech českých jmen. K dispozici jsou pouze data zvěřejněná Českým Statistickým Úřadem.</em></p>
     </div>
 
     <div v-if="isLoading" class="loading">
