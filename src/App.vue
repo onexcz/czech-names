@@ -484,6 +484,7 @@ body {
   position: relative;
   transition: all 0.2s ease;
   background-color: white;
+  vertical-align: middle;
 }
 
 .checkbox-label input[type="checkbox"]:checked {
@@ -506,6 +507,8 @@ body {
 .checkbox-text {
   font-size: 0.9rem;
   color: #374151;
+  vertical-align: middle;
+  padding-left: 5px;
 }
 
 select[disabled] {
