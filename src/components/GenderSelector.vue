@@ -5,7 +5,6 @@
       :class="{ active: modelValue === 'male' }"
       @click="$emit('update:modelValue', 'male')"
     >
-      <i class="fas fa-mars"></i>
       <h2>CHLAPCI</h2>
     </div>
     <div 
@@ -13,7 +12,6 @@
       :class="{ active: modelValue === 'female' }"
       @click="$emit('update:modelValue', 'female')"
     >
-      <i class="fas fa-venus"></i>
       <h2>DÍVKY</h2>
     </div>
   </div>
