@@ -80,7 +80,9 @@ export default defineComponent({
           })
       } else {
         // Alphabetical sorting
-        return names.sort().map(name => ({ name, rank: '' }))
+        return names
+          .map(name => ({ name, rank: '' }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'cs'))
       }
     }
   },
