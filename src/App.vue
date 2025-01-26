@@ -3,6 +3,7 @@ import { defineComponent } from 'vue'
 import GenderSelector from './components/GenderSelector.vue'
 import NameFilters from './components/NameFilters.vue'
 import NamesList from './components/NamesList.vue'
+import Footer from './components/Footer.vue'
 
 interface NameItem {
   name: string
@@ -23,7 +24,8 @@ export default defineComponent({
   components: {
     GenderSelector,
     NameFilters,
-    NamesList
+    NamesList,
+    Footer
   },
   data() {
     return {
@@ -229,6 +231,8 @@ export default defineComponent({
         :show-rank="filters.sortBy === 'rank'"
       />
     </template>
+
+    <Footer />
   </div>
 </template>
 
