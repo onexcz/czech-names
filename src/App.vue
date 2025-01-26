@@ -206,7 +206,7 @@ export default defineComponent({
     <div class="info-section">
       <h1>Jména v České Republice</h1>
       <p class="info-text">Neoficiální seznam jmen dětí narozených po roce 2000 a kompletní seznam jmen.</p>
-      <p class="info-text"><em>Poznámka: Pro seznam jmen byla použita data zvěřejněná Českým statistickým úřadem a Ministersvem vnitra.</em></p>
+      <p class="info-text"><em>Poznámka: Pro seznam jmen byla použita data zvěřejněná Českým statistickým úřadem a Ministerstvem vnitra.</em></p>
     </div>
 
     <div v-if="isLoading" class="loading">
