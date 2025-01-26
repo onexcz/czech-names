@@ -65,7 +65,7 @@ export default defineComponent({
         names = names.filter(name => !name.includes(' '))
       }
 
-      // If sorting by rank
+      // If sorting by rank (only available when specific year is selected)
       if (this.filters.year && this.filters.sortBy === 'rank') {
         const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender] || {}
         return names
@@ -100,15 +100,22 @@ export default defineComponent({
         const names = text.split('\n')
           .filter(line => line.trim())
           .map(line => {
-            const [rank, name] = line.split(',').map(item => item.trim())
-            if (name) {
-              const upperName = name.toUpperCase()
-              // Store rank information
-              if (year) {
-                const gender = filePath.includes('/data/boys/') ? 'male' : 'female'
+            if (year) {
+              // For year-specific files that include rank
+              const [rank, name] = line.split(',').map(item => item.trim())
+              if (name) {
+                const upperName = name.toUpperCase()
+                // Store rank information
+                const gender = filePath.includes('/boys/') ? 'male' : 'female'
                 this.namesByYear[year][gender][upperName] = rank
+                return upperName
               }
-              return upperName
+            } else {
+              // For general name lists without rank
+              const name = line.trim()
+              if (name) {
+                return name.toUpperCase()
+              }
             }
             return null
           })
@@ -125,6 +132,15 @@ export default defineComponent({
       try {
         const years = new Set<string>()
         
+        // Load general name lists first
+        const [boysNames, girlsNames] = await Promise.all([
+          this.loadCSV('/data/boys.csv'),
+          this.loadCSV('/data/girls.csv')
+        ])
+        
+        this.maleNames = boysNames
+        this.femaleNames = girlsNames
+
         // Check years from 2000 to current year
         for (let year = 2000; year <= new Date().getFullYear(); year++) {
           const boysPath = `/data/boys/${year}.csv`
@@ -139,7 +155,6 @@ export default defineComponent({
             // Check if responses are CSV files by looking at content-type or first line
             const isCSV = async (response: Response) => {
               const text = await response.text()
-              // Check if the content looks like CSV (contains a comma and starts with a number)
               return /^\d+,/.test(text.trim())
             }
 
@@ -152,7 +167,6 @@ export default defineComponent({
               years.add(year.toString())
             }
           } catch (e) {
-            // Skip if file doesn't exist or there's an error
             continue
           }
         }
@@ -163,21 +177,16 @@ export default defineComponent({
 
         this.availableYears = [...years].sort((a, b) => parseInt(b) - parseInt(a))
 
-        // Load boys names
+        // Load year-specific data
         const boysPromises = this.availableYears.map(year => 
           this.loadCSV(`/data/boys/${year}.csv`)
         )
-        const boysNamesArrays = await Promise.all(boysPromises)
-        const boysSet = new Set(boysNamesArrays.flat())
-        this.maleNames = [...boysSet]
+        await Promise.all(boysPromises)
 
-        // Load girls names
         const girlsPromises = this.availableYears.map(year => 
           this.loadCSV(`/data/girls/${year}.csv`)
         )
-        const girlsNamesArrays = await Promise.all(girlsPromises)
-        const girlsSet = new Set(girlsNamesArrays.flat())
-        this.femaleNames = [...girlsSet]
+        await Promise.all(girlsPromises)
 
         this.isLoading = false
       } catch (error) {
