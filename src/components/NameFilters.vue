@@ -25,7 +25,7 @@
         >
           <option value="alpha">Abecedně</option>
           <option value="rank" :disabled="!filters.year">
-            Podle pořadí {{ !filters.year ? '(nejdříve vyberte rok)' : '' }}
+            Podle oblíbenosti {{ !filters.year ? '(nejdříve vyberte rok)' : '' }}
           </option>
         </select>
       </div>
