@@ -237,12 +237,20 @@ export default defineComponent({
 </template>
 
 <style>
+/* Add these at the top of the style section */
+:root {
+  color-scheme: light;
+  background-color: #ffffff;
+  color: #333333;
+}
+
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
   display: flex;
   justify-content: center;
+  background-color: #ffffff;
 }
 
 #app {
@@ -264,7 +272,7 @@ body {
 }
 
 .info-text {
-  color: #c6c2c2;
+  color: #666666;
   margin: 10px 0;
 }
 
