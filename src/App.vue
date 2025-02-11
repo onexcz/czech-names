@@ -237,6 +237,9 @@ export default defineComponent({
 </template>
 
 <style>
+:root {
+  color-scheme: dark;
+}
 body {
   margin: 0;
   padding: 0;
