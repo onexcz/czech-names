@@ -32,6 +32,8 @@ export default defineComponent({
       selectedGender: null as 'male' | 'female' | null,
       maleNames: [] as string[],
       femaleNames: [] as string[],
+      maleNamesAll: [] as string[],
+      femaleNamesAll: [] as string[],      
       isLoading: true,
       filters: {
         year: '',
@@ -49,18 +51,22 @@ export default defineComponent({
       if (!this.selectedGender) return []
       
       let names = this.selectedGender === 'male' ? this.maleNames : this.femaleNames
-      
-      // Apply text filter
-      if (this.filters.searchText) {
-        const searchTerm = this.filters.searchText.toUpperCase()
-        names = names.filter(name => name.includes(searchTerm))
-      }
 
       // Filter by year (for both sorting methods)
       if (this.filters.year) {
         const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender] || {}
         names = names.filter(name => yearData[name])
+      } else {
+        let namesAll = this.selectedGender === 'male' ? this.maleNamesAll : this.femaleNamesAll
+        var namesAllSet = new Set([...names, ...namesAll])
+        names = [...namesAllSet]
       }
+
+      // Apply text filter
+      if (this.filters.searchText) {
+        const searchTerm = this.filters.searchText.toUpperCase()
+        names = names.filter(name => name.includes(searchTerm))
+      }      
 
       // Filter plural names
       if (!this.filters.includePluralNames) {
@@ -140,8 +146,8 @@ export default defineComponent({
           this.loadCSV('/data/girls.csv')
         ])
         
-        this.maleNames = boysNames
-        this.femaleNames = girlsNames
+        this.maleNamesAll = boysNames
+        this.femaleNamesAll = girlsNames
 
         // Check years from 2000 to current year
         for (let year = 2000; year <= new Date().getFullYear(); year++) {
@@ -179,16 +185,21 @@ export default defineComponent({
 
         this.availableYears = [...years].sort((a, b) => parseInt(b) - parseInt(a))
 
-        // Load year-specific data
+        // Load boys names
         const boysPromises = this.availableYears.map(year => 
           this.loadCSV(`/data/boys/${year}.csv`)
         )
-        await Promise.all(boysPromises)
+        const boysNamesArrays = await Promise.all(boysPromises)
+        const boysSet = new Set(boysNamesArrays.flat())
+        this.maleNames = [...boysSet]
 
+        // Load girls names
         const girlsPromises = this.availableYears.map(year => 
           this.loadCSV(`/data/girls/${year}.csv`)
         )
-        await Promise.all(girlsPromises)
+        const girlsNamesArrays = await Promise.all(girlsPromises)
+        const girlsSet = new Set(girlsNamesArrays.flat())
+        this.femaleNames = [...girlsSet]
 
         this.isLoading = false
       } catch (error) {
