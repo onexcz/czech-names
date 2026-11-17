@@ -28,3 +28,7 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# Compiled output accidentally emitted next to sources
+src/**/*.js
+src/**/*.js.map
