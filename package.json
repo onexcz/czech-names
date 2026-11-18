@@ -8,15 +8,18 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "test": "vitest run"
   },
   "dependencies": {
+    "sortablejs": "^1.15.7",
     "vue": "^3.5.13"
   },
   "devDependencies": {
     "@rollup/plugin-dsv": "^3.0.5",
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.10.7",
+    "@types/sortablejs": "^1.15.9",
     "@types/webpack-env": "^1.18.5",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vitejs/plugin-vue-jsx": "^4.1.1",
@@ -25,6 +28,7 @@
     "typescript": "~5.7.3",
     "vite": "^6.0.11",
     "vite-plugin-vue-devtools": "^7.7.0",
+    "vitest": "^3.2.7",
     "vue-tsc": "^2.2.0"
   }
 }
