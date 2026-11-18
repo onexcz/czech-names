@@ -16,6 +16,20 @@
       </div>
 
       <div class="filter-group">
+        <label for="scope">Rozsah jmen</label>
+        <select
+          id="scope"
+          :value="filters.nameScope"
+          :disabled="!!filters.year"
+          :title="filters.year ? 'Pro vybraný rok se zobrazuje první stovka jmen' : ''"
+          @input="updateFilter('nameScope', ($event.target as HTMLSelectElement).value)"
+        >
+          <option value="czech">Běžná česká jména</option>
+          <option value="all">Všechna povolená jména</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
         <label for="sort">Řazení</label>
         <select 
           id="sort" 
@@ -60,6 +74,7 @@ import { defineComponent, PropType } from 'vue'
 
 interface Filters {
   year: string
+  nameScope: 'czech' | 'all'
   sortBy: 'alpha' | 'rank'
   searchText: string
   includePluralNames: boolean

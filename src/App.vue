@@ -33,10 +33,13 @@ export default defineComponent({
       maleNames: [] as string[],
       femaleNames: [] as string[],
       maleNamesAll: [] as string[],
-      femaleNamesAll: [] as string[],      
+      femaleNamesAll: [] as string[],
+      maleNamesCzech: [] as string[],
+      femaleNamesCzech: [] as string[],
       isLoading: true,
       filters: {
         year: '',
+        nameScope: 'czech' as 'czech' | 'all',
         sortBy: 'alpha' as 'alpha' | 'rank',
         searchText: '',
         includePluralNames: true
@@ -56,6 +59,8 @@ export default defineComponent({
       if (this.filters.year) {
         const yearData = this.namesByYear[this.filters.year]?.[this.selectedGender] || {}
         names = names.filter(name => yearData[name])
+      } else if (this.filters.nameScope === 'czech') {
+        names = this.selectedGender === 'male' ? this.maleNamesCzech : this.femaleNamesCzech
       } else {
         let namesAll = this.selectedGender === 'male' ? this.maleNamesAll : this.femaleNamesAll
         var namesAllSet = new Set([...names, ...namesAll])
@@ -141,13 +146,17 @@ export default defineComponent({
         const years = new Set<string>()
         
         // Load general name lists first
-        const [boysNames, girlsNames] = await Promise.all([
+        const [boysNames, girlsNames, boysCzech, girlsCzech] = await Promise.all([
           this.loadCSV('/data/boys.csv'),
-          this.loadCSV('/data/girls.csv')
+          this.loadCSV('/data/girls.csv'),
+          this.loadCSV('/data/czech/boys.csv'),
+          this.loadCSV('/data/czech/girls.csv')
         ])
-        
+
         this.maleNamesAll = boysNames
         this.femaleNamesAll = girlsNames
+        this.maleNamesCzech = boysCzech
+        this.femaleNamesCzech = girlsCzech
 
         // Check years from 2000 to current year
         for (let year = 2000; year <= new Date().getFullYear(); year++) {
@@ -219,7 +228,7 @@ export default defineComponent({
     <div class="info-section">
       <h1>Jména v České Republice</h1>
       <p class="info-text">Neoficiální seznam jmen dětí narozených po roce 2000 a kompletní seznam jmen, které lze v ČR použít.</p>
-      <p class="info-text"><em>Poznámka: Kompletní seznam jmen (Všechny roky) byl stažen ze stránek Ministerstva vnitra. Roční seznamy jmen a jejich oblíbenost jsou vytvořeny z dat Českého statistického úřadu.</em></p>
+      <p class="info-text"><em>Poznámka: Běžná česká jména jsou jména z občanského kalendáře a jména, která se v letech 2000–2025 alespoň jednou umístila v první stovce. Kompletní seznam povolených jmen byl stažen ze stránek Ministerstva vnitra. Roční seznamy jmen a jejich oblíbenost jsou vytvořeny z dat Českého statistického úřadu.</em></p>
     </div>
 
     <div v-if="isLoading" class="loading">
