@@ -5,7 +5,7 @@ import NameFilters from './components/NameFilters.vue'
 import NamesList from './components/NamesList.vue'
 import Footer from './components/Footer.vue'
 import ShortlistPanel from './components/ShortlistPanel.vue'
-import { loadShortlists, saveShortlists, toggle, type Shortlists } from './shortlist'
+import { append, loadShortlists, normalizeName, saveShortlists, toggle, type Shortlists } from './shortlist'
 
 const DESKTOP_QUERY = '(min-width: 900px)'
 
@@ -70,6 +70,20 @@ export default defineComponent({
     currentShortlist(): string[] {
       return this.selectedGender ? this.shortlists[this.selectedGender] : []
     },
+    knownNames(): Set<string> {
+      if (this.selectedGender === 'male') {
+        return new Set([...this.maleNamesAll, ...this.maleNames, ...this.maleNamesCzech])
+      }
+      if (this.selectedGender === 'female') {
+        return new Set([...this.femaleNamesAll, ...this.femaleNames, ...this.femaleNamesCzech])
+      }
+      return new Set()
+    },
+    /** A searched-for name with no results, offered as a shortcut to add it. */
+    searchedName(): string | null {
+      if (!this.filters.searchText || this.displayedNames.length > 0) return null
+      return normalizeName(this.filters.searchText)
+    },
     displayedNames(): NameItem[] {
       if (!this.selectedGender) return []
       
@@ -122,6 +136,9 @@ export default defineComponent({
   methods: {
     setShortlist(names: string[]) {
       if (this.selectedGender) this.shortlists[this.selectedGender] = names
+    },
+    addSearchedName() {
+      if (this.searchedName) this.setShortlist(append(this.currentShortlist, this.searchedName))
     },
     toggleLiked(name: string) {
       this.setShortlist(toggle(this.currentShortlist, name))
@@ -279,19 +296,29 @@ export default defineComponent({
       />
 
       <div v-if="selectedGender" class="browse" :class="{ 'with-aside': isDesktop }">
-        <NamesList
-          :names="displayedNames"
-          :gender="selectedGender"
-          :show-rank="filters.sortBy === 'rank'"
-          :liked="currentShortlist"
-          :drag-enabled="isDesktop"
-          @toggle="toggleLiked"
-        />
+        <div class="browse-main">
+          <NamesList
+            :names="displayedNames"
+            :gender="selectedGender"
+            :show-rank="filters.sortBy === 'rank'"
+            :liked="currentShortlist"
+            :drag-enabled="isDesktop"
+            @toggle="toggleLiked"
+          />
+
+          <div v-if="searchedName" class="search-add">
+            <p>Jméno <strong>{{ searchedName }}</strong> v seznamu není.</p>
+            <p v-if="currentShortlist.includes(searchedName)" class="already">♥ Už je v oblíbených</p>
+            <button v-else type="button" @click="addSearchedName">
+              ♥ Přidat {{ searchedName }} do oblíbených
+            </button>
+          </div>
+        </div>
 
         <aside v-if="isDesktop" class="shortlist-aside">
           <h3><span class="heart">♥</span> Oblíbená jména <span class="count">({{ currentShortlist.length }})</span></h3>
           <div class="shortlist-box">
-            <ShortlistPanel :names="currentShortlist" @update:names="setShortlist" />
+            <ShortlistPanel :names="currentShortlist" :known="knownNames" @update:names="setShortlist" />
           </div>
         </aside>
       </div>
@@ -307,7 +334,7 @@ export default defineComponent({
           <span class="chevron">{{ mobilePanelOpen ? '▼' : '▲' }}</span>
         </button>
         <div v-show="mobilePanelOpen" class="mobile-shortlist-panel">
-          <ShortlistPanel :names="currentShortlist" :drop-hint="false" @update:names="setShortlist" />
+          <ShortlistPanel :names="currentShortlist" :known="knownNames" :drop-hint="false" @update:names="setShortlist" />
         </div>
       </div>
     </template>
@@ -419,6 +446,32 @@ body {
   .app-container {
     padding-bottom: 80px;
   }
+}
+
+.search-add {
+  text-align: center;
+  color: #c6c2c2;
+  margin-top: 8px;
+}
+
+.search-add button {
+  margin-top: 4px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background-color: #be185d;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.search-add button:hover {
+  background-color: #9d174d;
+}
+
+.search-add .already {
+  color: #f4a6c0;
 }
 
 .loading {

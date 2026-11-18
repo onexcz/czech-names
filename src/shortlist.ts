@@ -49,3 +49,17 @@ export function move(list: string[], from: number, to: number): string[] {
 export function toggle(list: string[], name: string): string[] {
   return list.includes(name) ? list.filter(n => n !== name) : [...list, name]
 }
+
+export const MAX_NAME_LENGTH = 40
+
+/** Clean up a typed name: trim, collapse spaces, uppercase. Null if it isn't a plausible name. */
+export function normalizeName(input: string): string | null {
+  const name = input.trim().replace(/\s+/g, ' ').toLocaleUpperCase('cs')
+  if (!name || name.length > MAX_NAME_LENGTH) return null
+  return /^\p{L}[\p{L} -]*$/u.test(name) ? name : null
+}
+
+/** Append `name` unless it's already there (then the same array is returned). */
+export function append(list: string[], name: string): string[] {
+  return list.includes(name) ? list : [...list, name]
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { STORAGE_KEY, insertAt, loadShortlists, move, saveShortlists, toggle } from './shortlist'
+import { STORAGE_KEY, append, insertAt, loadShortlists, move, normalizeName, saveShortlists, toggle } from './shortlist'
 
 function memoryStorage(initial: Record<string, string> = {}): Storage {
   const data = { ...initial }
@@ -72,5 +72,36 @@ describe('list operations', () => {
     const list = ['A', 'B']
     insertAt(list, 'C', 0); move(list, 0, 1); toggle(list, 'A')
     expect(list).toEqual(['A', 'B'])
+  })
+})
+
+describe('normalizeName', () => {
+  it('uppercases, trims and collapses spaces', () => {
+    expect(normalizeName('  kornélie ')).toBe('KORNÉLIE')
+    expect(normalizeName('anna   marie')).toBe('ANNA MARIE')
+    expect(normalizeName('jean-luc')).toBe('JEAN-LUC')
+  })
+  it('handles Czech letters', () => {
+    expect(normalizeName('řehoř')).toBe('ŘEHOŘ')
+    expect(normalizeName('žofie')).toBe('ŽOFIE')
+  })
+  it('rejects empty, non-letters and too long input', () => {
+    expect(normalizeName('')).toBeNull()
+    expect(normalizeName('   ')).toBeNull()
+    expect(normalizeName('anna2')).toBeNull()
+    expect(normalizeName('<b>')).toBeNull()
+    expect(normalizeName('-anna')).toBeNull()
+    expect(normalizeName('a'.repeat(41))).toBeNull()
+    expect(normalizeName('a'.repeat(40))).toBe('A'.repeat(40))
+  })
+})
+
+describe('append', () => {
+  it('adds to the end', () => {
+    expect(append(['A'], 'B')).toEqual(['A', 'B'])
+  })
+  it('keeps the list unchanged for a duplicate', () => {
+    const list = ['A', 'B']
+    expect(append(list, 'A')).toBe(list)
   })
 })

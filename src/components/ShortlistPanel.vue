@@ -2,10 +2,13 @@
   <div class="shortlist">
     <div class="shortlist-body">
       <ol ref="list" class="shortlist-items">
-        <li v-for="(name, i) in names" :key="name" :data-name="name">
+        <li v-for="(name, i) in names" :key="name" :data-name="name" :class="{ flash: flashName === name }">
           <span class="handle" title="Přetáhněte pro změnu pořadí" aria-hidden="true">⠿</span>
           <span class="position">{{ i + 1 }}.</span>
-          <span class="name">{{ name }}</span>
+          <span class="name">
+            {{ name }}
+            <span v-if="!known.has(name)" class="custom" title="Vlastní jméno">✎</span>
+          </span>
           <button
             type="button"
             class="remove"
@@ -18,23 +21,45 @@
         {{ dropHint ? 'Přetáhněte sem jména nebo klikněte na ♡' : 'Klikněte na ♡ u jména' }}
       </p>
     </div>
+
+    <form class="add-form" @submit.prevent="addTyped">
+      <input
+        v-model="typed"
+        type="text"
+        :maxlength="maxLength"
+        placeholder="Vlastní jméno…"
+        aria-label="Přidat vlastní jméno"
+        :class="{ invalid: typedInvalid }"
+        @input="typedInvalid = false"
+      >
+      <button type="submit" aria-label="Přidat do oblíbených">+</button>
+    </form>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, PropType } from 'vue'
 import Sortable from 'sortablejs'
-import { insertAt, move } from '../shortlist'
+import { MAX_NAME_LENGTH, append, insertAt, move, normalizeName } from '../shortlist'
 
 export default defineComponent({
   name: 'ShortlistPanel',
   props: {
     names: { type: Array as PropType<string[]>, required: true },
-    dropHint: { type: Boolean, default: true }
+    dropHint: { type: Boolean, default: true },
+    /** Names that exist in the data; anything else is marked as the user's own. */
+    known: { type: Object as PropType<Set<string>>, default: () => new Set<string>() }
   },
   emits: ['update:names'],
   data() {
-    return { sortable: null as Sortable | null }
+    return {
+      sortable: null as Sortable | null,
+      typed: '',
+      typedInvalid: false,
+      flashName: '',
+      flashTimer: 0,
+      maxLength: MAX_NAME_LENGTH
+    }
   },
   mounted() {
     this.sortable = Sortable.create(this.$refs.list as HTMLElement, {
@@ -67,6 +92,24 @@ export default defineComponent({
   },
   beforeUnmount() {
     this.sortable?.destroy()
+    clearTimeout(this.flashTimer)
+  },
+  methods: {
+    addTyped() {
+      const name = normalizeName(this.typed)
+      if (!name) {
+        this.typedInvalid = this.typed.trim() !== ''
+        return
+      }
+      this.typed = ''
+      if (this.names.includes(name)) this.flash(name)
+      else this.$emit('update:names', append(this.names, name))
+    },
+    flash(name: string) {
+      clearTimeout(this.flashTimer)
+      this.flashName = name
+      this.flashTimer = window.setTimeout(() => { this.flashName = '' }, 1200)
+    }
   }
 })
 </script>
@@ -121,6 +164,62 @@ export default defineComponent({
 .name {
   flex: 1;
   font-weight: 600;
+}
+
+.custom {
+  color: #9ca3af;
+  font-weight: normal;
+  margin-left: 4px;
+}
+
+.shortlist-items li.flash {
+  animation: flash 1.2s ease;
+}
+
+@keyframes flash {
+  0%, 40% { background-color: #fde68a; border-color: #f59e0b; }
+  100% { background-color: #fff; }
+}
+
+.add-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.add-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.add-form input:focus {
+  outline: none;
+  border-color: #be185d;
+}
+
+.add-form input.invalid {
+  border-color: #dc2626;
+}
+
+.add-form button {
+  width: 38px;
+  border: none;
+  border-radius: 6px;
+  background-color: #be185d;
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.add-form button:hover {
+  background-color: #9d174d;
 }
 
 .remove {
