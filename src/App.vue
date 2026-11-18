@@ -289,8 +289,10 @@ export default defineComponent({
         />
 
         <aside v-if="isDesktop" class="shortlist-aside">
-          <h3>♥ Oblíbená jména <span class="count">({{ currentShortlist.length }})</span></h3>
-          <ShortlistPanel :names="currentShortlist" @update:names="setShortlist" />
+          <h3><span class="heart">♥</span> Oblíbená jména <span class="count">({{ currentShortlist.length }})</span></h3>
+          <div class="shortlist-box">
+            <ShortlistPanel :names="currentShortlist" @update:names="setShortlist" />
+          </div>
         </aside>
       </div>
 
@@ -356,26 +358,30 @@ body {
   align-items: start;
 }
 
+/* Same structure and spacing as .names-list (padding-top + h3) so the
+   headings and the box line up with the names grid. */
 .shortlist-aside {
   position: sticky;
-  top: 20px;
-  margin-top: 20px;
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 12px;
-  color: #333;
+  top: 0;
+  padding-top: 20px;
 }
 
 .shortlist-aside h3 {
-  margin: 0 0 12px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.shortlist-aside .heart {
   color: #be185d;
 }
 
-.shortlist-aside .count {
-  color: #6b7280;
-  font-weight: normal;
+.shortlist-box {
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  color: #333;
 }
 
 .mobile-shortlist {
