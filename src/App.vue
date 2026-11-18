@@ -4,6 +4,10 @@ import GenderSelector from './components/GenderSelector.vue'
 import NameFilters from './components/NameFilters.vue'
 import NamesList from './components/NamesList.vue'
 import Footer from './components/Footer.vue'
+import ShortlistPanel from './components/ShortlistPanel.vue'
+import { loadShortlists, saveShortlists, toggle, type Shortlists } from './shortlist'
+
+const DESKTOP_QUERY = '(min-width: 900px)'
 
 interface NameItem {
   name: string
@@ -25,7 +29,8 @@ export default defineComponent({
     GenderSelector,
     NameFilters,
     NamesList,
-    Footer
+    Footer,
+    ShortlistPanel
   },
   data() {
     return {
@@ -46,10 +51,25 @@ export default defineComponent({
       },
       availableYears: [] as string[],
       namesByYear: {} as NamesByYear,
-      displayedItems: [] as NameItem[]
+      displayedItems: [] as NameItem[],
+      shortlists: loadShortlists() as Shortlists,
+      isDesktop: typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches,
+      desktopQuery: null as MediaQueryList | null,
+      mobilePanelOpen: false
+    }
+  },
+  watch: {
+    shortlists: {
+      deep: true,
+      handler(lists: Shortlists) {
+        saveShortlists(lists)
+      }
     }
   },
   computed: {
+    currentShortlist(): string[] {
+      return this.selectedGender ? this.shortlists[this.selectedGender] : []
+    },
     displayedNames(): NameItem[] {
       if (!this.selectedGender) return []
       
@@ -100,6 +120,15 @@ export default defineComponent({
     }
   },
   methods: {
+    setShortlist(names: string[]) {
+      if (this.selectedGender) this.shortlists[this.selectedGender] = names
+    },
+    toggleLiked(name: string) {
+      this.setShortlist(toggle(this.currentShortlist, name))
+    },
+    onDesktopChange(e: MediaQueryListEvent) {
+      this.isDesktop = e.matches
+    },
     async loadCSV(filePath: string): Promise<string[]> {
       try {
         const response = await fetch(filePath)
@@ -219,6 +248,11 @@ export default defineComponent({
   },
   mounted() {
     this.loadAllNames()
+    this.desktopQuery = window.matchMedia(DESKTOP_QUERY)
+    this.desktopQuery.addEventListener('change', this.onDesktopChange)
+  },
+  beforeUnmount() {
+    this.desktopQuery?.removeEventListener('change', this.onDesktopChange)
   }
 })
 </script>
@@ -244,12 +278,36 @@ export default defineComponent({
         :available-years="availableYears"
       />
 
-      <NamesList
-        v-if="selectedGender"
-        :names="displayedNames"
-        :gender="selectedGender"
-        :show-rank="filters.sortBy === 'rank'"
-      />
+      <div v-if="selectedGender" class="browse" :class="{ 'with-aside': isDesktop }">
+        <NamesList
+          :names="displayedNames"
+          :gender="selectedGender"
+          :show-rank="filters.sortBy === 'rank'"
+          :liked="currentShortlist"
+          :drag-enabled="isDesktop"
+          @toggle="toggleLiked"
+        />
+
+        <aside v-if="isDesktop" class="shortlist-aside">
+          <h3>♥ Oblíbená jména <span class="count">({{ currentShortlist.length }})</span></h3>
+          <ShortlistPanel :names="currentShortlist" @update:names="setShortlist" />
+        </aside>
+      </div>
+
+      <div v-if="selectedGender && !isDesktop" class="mobile-shortlist" :class="{ open: mobilePanelOpen }">
+        <button
+          type="button"
+          class="mobile-shortlist-toggle"
+          :aria-expanded="mobilePanelOpen"
+          @click="mobilePanelOpen = !mobilePanelOpen"
+        >
+          ♥ Oblíbená ({{ currentShortlist.length }})
+          <span class="chevron">{{ mobilePanelOpen ? '▼' : '▲' }}</span>
+        </button>
+        <div v-show="mobilePanelOpen" class="mobile-shortlist-panel">
+          <ShortlistPanel :names="currentShortlist" :drop-hint="false" @update:names="setShortlist" />
+        </div>
+      </div>
     </template>
 
     <Footer />
@@ -289,6 +347,72 @@ body {
 .info-text {
   color: #c6c2c2;
   margin: 10px 0;
+}
+
+.browse.with-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.shortlist-aside {
+  position: sticky;
+  top: 20px;
+  margin-top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  color: #333;
+}
+
+.shortlist-aside h3 {
+  margin: 0 0 12px;
+  color: #be185d;
+}
+
+.shortlist-aside .count {
+  color: #6b7280;
+  font-weight: normal;
+}
+
+.mobile-shortlist {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background-color: #f8f9fa;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 12px 12px 0 0;
+}
+
+.mobile-shortlist-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border: none;
+  background: none;
+  color: #be185d;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mobile-shortlist-panel {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+}
+
+@media (max-width: 899px) {
+  .app-container {
+    padding-bottom: 80px;
+  }
 }
 
 .loading {

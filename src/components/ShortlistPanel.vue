@@ -41,6 +41,9 @@ export default defineComponent({
       group: { name: 'names', put: true },
       handle: '.handle',
       animation: 150,
+      // Mouse/touch-event dragging instead of native HTML5 DnD: same feel everywhere.
+      forceFallback: true,
+      fallbackOnBody: true,
       onUpdate: (evt) => {
         const { item, oldIndex, newIndex } = evt
         if (oldIndex === undefined || newIndex === undefined) return
