@@ -6,6 +6,7 @@ import NamesList from './components/NamesList.vue'
 import Footer from './components/Footer.vue'
 import ShortlistPanel from './components/ShortlistPanel.vue'
 import { append, loadShortlists, normalizeName, saveShortlists, toggle, type Shortlists } from './shortlist'
+import { buildShareHash } from './share'
 
 const DESKTOP_QUERY = '(min-width: 900px)'
 
@@ -55,7 +56,10 @@ export default defineComponent({
       shortlists: loadShortlists() as Shortlists,
       isDesktop: typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches,
       desktopQuery: null as MediaQueryList | null,
-      mobilePanelOpen: false
+      mobilePanelOpen: false,
+      shareMessage: '',
+      shareFallbackUrl: '',
+      shareTimer: 0
     }
   },
   watch: {
@@ -69,6 +73,9 @@ export default defineComponent({
   computed: {
     currentShortlist(): string[] {
       return this.selectedGender ? this.shortlists[this.selectedGender] : []
+    },
+    hasAnyFavourites(): boolean {
+      return this.shortlists.male.length > 0 || this.shortlists.female.length > 0
     },
     knownNames(): Set<string> {
       if (this.selectedGender === 'male') {
@@ -136,6 +143,30 @@ export default defineComponent({
   methods: {
     setShortlist(names: string[]) {
       if (this.selectedGender) this.shortlists[this.selectedGender] = names
+    },
+    async shareLists() {
+      const url = `${window.location.origin}/${buildShareHash(this.shortlists)}`
+      this.shareFallbackUrl = ''
+      if (!this.isDesktop && navigator.share) {
+        try {
+          await navigator.share({ title: 'Oblíbená jména', url })
+          return
+        } catch (e) {
+          if ((e as DOMException).name === 'AbortError') return
+          // Share sheet unavailable: fall through to copying.
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(url)
+        this.flashShareMessage('Odkaz zkopírován')
+      } catch {
+        this.shareFallbackUrl = url
+      }
+    },
+    flashShareMessage(message: string) {
+      clearTimeout(this.shareTimer)
+      this.shareMessage = message
+      this.shareTimer = window.setTimeout(() => { this.shareMessage = '' }, 2500)
     },
     addSearchedName() {
       if (this.searchedName) this.setShortlist(append(this.currentShortlist, this.searchedName))
@@ -320,19 +351,47 @@ export default defineComponent({
           <div class="shortlist-box">
             <ShortlistPanel :names="currentShortlist" :known="knownNames" @update:names="setShortlist" />
           </div>
+          <div class="share-row">
+            <button type="button" class="share-button" :disabled="!hasAnyFavourites" @click="shareLists">
+              Sdílet
+            </button>
+            <span v-if="shareMessage" class="share-message" role="status">{{ shareMessage }}</span>
+          </div>
+          <input
+            v-if="shareFallbackUrl"
+            class="share-fallback"
+            readonly
+            :value="shareFallbackUrl"
+            aria-label="Odkaz ke sdílení"
+            @focus="($event.target as HTMLInputElement).select()"
+          >
         </aside>
       </div>
 
       <div v-if="selectedGender && !isDesktop" class="mobile-shortlist" :class="{ open: mobilePanelOpen }">
-        <button
-          type="button"
-          class="mobile-shortlist-toggle"
-          :aria-expanded="mobilePanelOpen"
-          @click="mobilePanelOpen = !mobilePanelOpen"
+        <div class="mobile-shortlist-bar">
+          <button
+            type="button"
+            class="mobile-shortlist-toggle"
+            :aria-expanded="mobilePanelOpen"
+            @click="mobilePanelOpen = !mobilePanelOpen"
+          >
+            ♥ Oblíbená ({{ currentShortlist.length }})
+            <span class="chevron">{{ mobilePanelOpen ? '▼' : '▲' }}</span>
+          </button>
+          <button type="button" class="share-button" :disabled="!hasAnyFavourites" @click="shareLists">
+            Sdílet
+          </button>
+        </div>
+        <p v-if="shareMessage" class="share-message mobile" role="status">{{ shareMessage }}</p>
+        <input
+          v-if="shareFallbackUrl"
+          class="share-fallback mobile"
+          readonly
+          :value="shareFallbackUrl"
+          aria-label="Odkaz ke sdílení"
+          @focus="($event.target as HTMLInputElement).select()"
         >
-          ♥ Oblíbená ({{ currentShortlist.length }})
-          <span class="chevron">{{ mobilePanelOpen ? '▼' : '▲' }}</span>
-        </button>
         <div v-show="mobilePanelOpen" class="mobile-shortlist-panel">
           <ShortlistPanel :names="currentShortlist" :known="knownNames" :drop-hint="false" @update:names="setShortlist" />
         </div>
@@ -402,8 +461,62 @@ body {
   color: #be185d;
 }
 
+.share-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 12px 0;
+  min-height: 32px;
+}
+
+.share-button {
+  padding: 6px 14px;
+  border: 1px solid #be185d;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #f4a6c0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-button:hover:not(:disabled) {
+  background-color: rgba(190, 24, 93, 0.2);
+}
+
+.share-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.share-message {
+  color: #86efac;
+  font-size: 0.85rem;
+}
+
+.share-message.mobile {
+  margin: 0 20px 8px;
+  color: #15803d;
+}
+
+.share-fallback {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.share-fallback.mobile {
+  width: calc(100% - 32px);
+  margin: 0 16px 8px;
+}
+
 .shortlist-box {
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding: 12px;
   background-color: #f8f9fa;
@@ -422,8 +535,18 @@ body {
   border-radius: 12px 12px 0 0;
 }
 
+.mobile-shortlist-bar {
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+}
+
+.mobile-shortlist-bar .share-button {
+  color: #be185d;
+}
+
 .mobile-shortlist-toggle {
-  width: 100%;
+  flex: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
